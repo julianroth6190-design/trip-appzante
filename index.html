@@ -4,17 +4,222 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zakynthos Trip</title>
+
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#030712">
+
+<style>
+:root {
+  --bg:#030712;
+  --glass:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.15);
+  --accent:#00d2ff;
+  --kids:#10b981;
+}
+
+body {
+  margin:0;
+  font-family:-apple-system,system-ui;
+  background:linear-gradient(#020617,#030712);
+  color:white;
+}
+
+.container { padding:16px; }
+
+.card {
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:16px;
+  margin-bottom:14px;
+  backdrop-filter:blur(20px);
+}
+
+h2 { margin:0 0 10px 0; }
+
+button {
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  margin-top:10px;
+  background:var(--accent);
+  font-weight:bold;
+}
+
+.tabbar {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:70px;
+  display:flex;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(20px);
+}
+
+.tab {
+  flex:1;
+  text-align:center;
+  padding-top:10px;
+  color:#888;
+}
+
+.tab.active {
+  color:var(--accent);
+}
+
+.hidden { display:none; }
+
+.spot {
+  padding:10px;
+  border-radius:12px;
+  margin:6px 0;
+  background:rgba(255,255,255,0.05);
+}
+
+.day {
+  margin-bottom:10px;
+}
+</style>
 </head>
-<body style="background:#030712;color:white;font-family:sans-serif;padding:20px;">
-<h1>Zakynthos Trip App 🌍</h1>
-<p>Installierbare App Version</p>
-<button onclick="alert('App läuft!')">Test Button</button>
+
+<body>
+
+<div class="container">
+
+<div id="home">
+  <div class="card">
+    <h2>🌍 Zakynthos Trip</h2>
+    <p>24.05 – 07.06 2026</p>
+    <p>✈️ HAM → ZTH 06:40</p>
+  </div>
+</div>
+
+<div id="plan" class="hidden"></div>
+
+<div id="budget" class="hidden">
+  <div class="card">
+    <h2>💸 Budget</h2>
+    <input id="amount" placeholder="€">
+    <input id="desc" placeholder="Beschreibung">
+    <button onclick="addExpense()">Hinzufügen</button>
+    <h3 id="sum"></h3>
+    <div id="list"></div>
+  </div>
+</div>
+
+<div id="kids" class="hidden"></div>
+
+</div>
+
+<div class="tabbar">
+  <div class="tab active" onclick="nav('home',this)">Home</div>
+  <div class="tab" onclick="nav('plan',this)">Plan</div>
+  <div class="tab" onclick="nav('budget',this)">Budget</div>
+  <div class="tab" onclick="nav('kids',this)">Kids</div>
+</div>
+
 <script>
-if ('serviceWorker' in navigator) {
+
+// STATE
+let trip = JSON.parse(localStorage.getItem("trip")) || {
+  plan:{},
+  expenses:[],
+  kids:{}
+};
+
+function save(){
+  localStorage.setItem("trip", JSON.stringify(trip));
+}
+
+// NAV
+function nav(id,el){
+  document.querySelectorAll('.container > div').forEach(v=>v.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// PLAN
+const spots = ["Navagio","Marathonisi","Banana Beach","Gerakas","Xigia","Keri"];
+
+function renderPlan(){
+  let html='';
+  for(let i=1;i<=14;i++){
+    html+=`
+    <div class="card day">
+      <h3>Tag ${i}</h3>
+      <div>
+        ${spots.map(s=>`
+          <div class="spot" onclick="select(${i},'${s}')">${s}</div>
+        `).join('')}
+      </div>
+      <p>${trip.plan[i]||''}</p>
+    </div>`;
+  }
+  document.getElementById("plan").innerHTML=html;
+}
+
+function select(day,spot){
+  trip.plan[day]=spot;
+  save();
+  renderPlan();
+}
+
+// BUDGET
+function addExpense(){
+  let a=parseFloat(amount.value);
+  if(!a) return;
+  trip.expenses.push({a, d:desc.value});
+  save();
+  renderBudget();
+}
+
+function renderBudget(){
+  let sum=0, html='';
+  trip.expenses.forEach(e=>{
+    sum+=e.a;
+    html+=`<div>${e.d}: ${e.a}€</div>`;
+  });
+  document.getElementById("sum").innerText="Total: "+sum+"€";
+  document.getElementById("list").innerHTML=html;
+}
+
+// KIDS
+const tasks = ["🐢 Schildkröte sehen","🍦 Blaues Eis","🏖 Sandburg"];
+
+function renderKids(){
+  let html='<div class="card"><h2>Kids Challenge</h2>';
+  tasks.forEach(t=>{
+    let done = trip.kids[t];
+    html+=`
+      <div onclick="toggleTask('${t}')"
+      style="padding:10px; margin:6px 0; border-radius:10px;
+      background:${done?'#10b981':'rgba(255,255,255,0.05)'}">
+      ${t}
+      </div>`;
+  });
+  html+='</div>';
+  document.getElementById("kids").innerHTML=html;
+}
+
+function toggleTask(t){
+  trip.kids[t]=!trip.kids[t];
+  save();
+  renderKids();
+}
+
+// INIT
+renderPlan();
+renderBudget();
+renderKids();
+
+// SERVICE WORKER (optional)
+if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
+
 </script>
+
 </body>
 </html>
